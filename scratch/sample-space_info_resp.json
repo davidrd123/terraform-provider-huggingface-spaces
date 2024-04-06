@@ -1,0 +1,39 @@
+{
+  "_id": "66108160e468e3d65db99030",
+  "id": "davidrd123/test-hf-api-20240405",
+  "author": "davidrd123",
+  "sha": "29a53a5f8d424ff4c184f3e4be6c08cf7f00ddde",
+  "lastModified": "2024-04-05T22:55:29.000Z",
+  "private": true,
+  "cardData": {
+    "title": "Zenml Server",
+    "emoji": "🧘",
+    "colorFrom": "purple",
+    "colorTo": "green",
+    "sdk": "docker",
+    "pinned": false,
+    "app_port": 8080,
+    "license": "apache-2.0"
+  },
+  "gated": false,
+  "disabled": false,
+  "host": "https://davidrd123-test-hf-api-20240405.hf.space",
+  "subdomain": "davidrd123-test-hf-api-20240405",
+  "tags": ["docker"],
+  "likes": 0,
+  "sdk": "docker",
+  "runtime": {
+    "stage": "RUNNING",
+    "hardware": { "current": "cpu-upgrade", "requested": "cpu-upgrade" },
+    "storage": { "current": null, "requested": null },
+    "gcTimeout": 172800,
+    "replicas": { "current": 1, "requested": 1 },
+    "devMode": false
+  },
+  "siblings": [
+    { "rfilename": ".gitattributes" },
+    { "rfilename": "Dockerfile" },
+    { "rfilename": "README.md" }
+  ],
+  "createdAt": "2024-04-05T22:55:28.000Z"
+}

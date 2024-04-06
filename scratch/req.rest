@@ -1,0 +1,12 @@
+POST "https://huggingface.co/api/repos/create" 
+content-type: application/json
+
+{
+  "Authorization:": "Bearer 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",
+  "type": "space",
+  "name": "test-hf-api",
+  "private": "false",
+  "sdk": "docker",
+  "template": "zenml/zenml"
+}
+

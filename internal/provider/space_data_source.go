@@ -175,18 +175,61 @@ func (d *SpaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	// Extract hardware, storage, and sleep time from the space JSON response
-	if hardware, ok := space["hardware"].(string); ok {
-		data.Hardware = types.StringValue(hardware)
-	} else {
-		resp.Diagnostics.AddError("Missing or Invalid Field", "The 'hardware' field is missing or not a string in the space JSON response")
+	// if hardware, ok := space["hardware"].(string); ok {
+	// 	data.Hardware = types.StringValue(hardware)
+	// } else {
+	// 	resp.Diagnostics.AddError("Missing or Invalid Field", "The 'hardware' field is missing or not a string in the space JSON response")
+	// 	return
+	// }
+
+	// Assuming `space` is a map[string]interface{} that has already parsed the JSON response
+	runtimeInfo, ok := space["runtime"].(map[string]interface{})
+	if !ok {
+		resp.Diagnostics.AddError("Missing or Invalid Field", "The 'runtime' field is missing or not an object in the space JSON response")
 		return
 	}
 
-	if storage, ok := space["storage"].(string); ok {
-		data.Storage = types.StringValue(storage)
-	} else {
-		resp.Diagnostics.AddError("Missing or Invalid Field", "The 'storage' field is missing or not a string in the space JSON response")
+	hardwareInfo, ok := runtimeInfo["hardware"].(map[string]interface{})
+	if !ok {
+		resp.Diagnostics.AddError("Missing or Invalid Field", "The 'hardware' field within 'runtime' is missing or not an object in the space JSON response")
 		return
+	}
+
+	currentHardware, ok := hardwareInfo["current"].(string)
+	if !ok {
+		// Handle cases where 'current' is not a string or missing
+		// For example, you might want to default to "unknown" or return an error
+		data.Hardware = types.StringValue("unknown")
+	} else {
+		data.Hardware = types.StringValue(currentHardware)
+	}
+
+	// if storage, ok := space["storage"].(string); ok {
+	// 	data.Storage = types.StringValue(storage)
+	// } else {
+	// 	resp.Diagnostics.AddError("Missing or Invalid Field", "The 'storage' field is missing or not a string in the space JSON response")
+	// 	return
+	// }
+	storageInfo, ok := runtimeInfo["storage"].(map[string]interface{})
+	if !ok {
+		resp.Diagnostics.AddError("Missing or Invalid Field", "The 'storage' field within 'runtime' is missing or not an object in the space JSON response")
+		return
+	}
+
+	currentStorage, ok := storageInfo["current"]
+	if !ok || currentStorage == nil {
+		// Handle cases where 'current' is missing or null
+		// For example, you might want to default to "unknown" or return an error
+		data.Storage = types.StringValue("unknown")
+	} else {
+		// Since the 'current' field can be null, ensure it's a string before setting
+		currentStorageStr, ok := currentStorage.(string)
+		if !ok {
+			// Handle cases where 'current' is not a string
+			data.Storage = types.StringValue("unknown")
+		} else {
+			data.Storage = types.StringValue(currentStorageStr)
+		}
 	}
 
 	if sleepTime, ok := space["sleepTime"].(float64); ok {

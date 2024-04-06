@@ -32,16 +32,57 @@ type SpaceResource struct {
 
 // SpaceResourceModel describes the resource data model.
 type SpaceResourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	Private   types.Bool   `tfsdk:"private"`
-	SDK       types.String `tfsdk:"sdk"`
-	Template  types.String `tfsdk:"template"`
-	Secrets   types.Map    `tfsdk:"secrets"`
-	Variables types.Map    `tfsdk:"variables"`
-	Hardware  types.String `tfsdk:"hardware"`
-	Storage   types.String `tfsdk:"storage"`
-	SleepTime types.Int64  `tfsdk:"sleep_time"`
+	ID           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Private      types.Bool   `tfsdk:"private"`
+	SDK          types.String `tfsdk:"sdk"`
+	Template     types.String `tfsdk:"template"`
+	Secrets      types.Map    `tfsdk:"secrets"`
+	Variables    types.Map    `tfsdk:"variables"`
+	Hardware     types.String `tfsdk:"hardware"`
+	Host         types.String `tfsdk:"host"`
+	Storage      types.String `tfsdk:"storage"`
+	SleepTime    types.Int64  `tfsdk:"sleep_time"`
+	Author       types.String `tfsdk:"author"`
+	LastModified types.String `tfsdk:"last_modified"`
+	Likes        types.Int64  `tfsdk:"likes"`
+	Tags         types.List   `tfsdk:"tags"`
+}
+
+type SpaceHardwareInfo struct {
+	Current   string `json:"current,omitempty"`
+	Requested string `json:"requested,omitempty"`
+}
+
+type SpaceStorageInfo struct {
+	Current   string `json:"current"`
+	Requested string `json:"requested"`
+}
+
+type SpaceRuntimeInfo struct {
+	Stage     string             `json:"stage"`
+	Hardware  *SpaceHardwareInfo `json:"hardware,omitempty"`
+	Storage   *SpaceStorageInfo  `json:"storage,omitempty"`
+	SleepTime *int64             `json:"sleep_time,omitempty"`
+}
+
+// SpaceResponseData is the response data from the Hugging Face API
+// It corresponds to the response from `hf_api.space_info`, which returns the `hf_api.SpaceInfo` object
+type SpaceResponseData struct {
+	ID           string            `json:"id"`
+	Author       *string           `json:"author,omitempty"`
+	Sha          *string           `json:"sha,omitempty"`
+	LastModified *string           `json:"lastModified,omitempty"` // Consider using time.Time with a custom unmarshaler if needed
+	Private      bool              `json:"private"`
+	Gated        *string           `json:"gated,omitempty"`
+	Disabled     bool              `json:"disabled"`
+	Host         *string           `json:"host,omitempty"`
+	Tags         []string          `json:"tags"`
+	Subdomain    *string           `json:"subdomain,omitempty"`
+	Likes        int               `json:"likes"`
+	SDK          *string           `json:"sdk,omitempty"`
+	Runtime      *SpaceRuntimeInfo `json:"runtime,omitempty"`
+	CreatedAt    *string           `json:"createdAt,omitempty"`
 }
 
 func (r *SpaceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -212,13 +253,94 @@ func (r *SpaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 func (r *SpaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data *SpaceResourceModel
 
+	log.Println("****[DEBUG] (*SpaceResource).Read() -> Reading space details")
+
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	log.Println("****[DEBUG] (*SpaceResource).Read() -> Starting to retrieve space details, space id:", data.ID.ValueString())
+
 	// ... (Retrieve space details using the GET /api/spaces/{space_id} endpoint)
+	url := fmt.Sprintf("https://huggingface.co/api/spaces/%s", data.ID.ValueString())
+
+	httpResp, err := r.client.Get(url)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read space, got error: %s", err))
+		return
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to read space, got status code: %d", httpResp.StatusCode))
+		return
+	}
+
+	log.Println("[DEBUG] Space details response:", httpResp.Body)
+
+	// var responseData SpaceResponseData
+	// err = json.NewDecoder(httpResp.Body).Decode(&responseData)
+	// if err != nil {
+	// 	resp.Diagnostics.AddError("JSON Decode Error", fmt.Sprintf("Unable to decode space response, got error: %s", err))
+	// 	return
+	// }
+
+	// // Map basic fields
+	// data.ID = types.StringValue(responseData.ID)
+
+	// // Since Author and SDK are *string, we need to check if they are nil before dereferencing
+	// if responseData.Author != nil {
+	// 	data.Author = types.StringValue(*responseData.Author)
+	// } else {
+	// 	// Decide on how you want to handle nil values, e.g., setting them to an empty string
+	// 	data.Author = types.StringValue("")
+	// }
+
+	// data.Private = types.BoolValue(responseData.Private)
+
+	// if responseData.SDK != nil {
+	// 	data.SDK = types.StringValue(*responseData.SDK)
+	// } else {
+	// 	// Handle nil SDK similarly
+	// 	data.SDK = types.StringValue("")
+	// }
+
+	// // Hardware and Storage might require conditional checks because the API might return null or different types
+	// var hardware, storage string
+
+	// // Check if Runtime is defined
+	// if responseData.Runtime != nil {
+	// 	// Check if Hardware is defined and has a Current value
+	// 	if responseData.Runtime.Hardware != nil && responseData.Runtime.Hardware.Current != "" {
+	// 		hardware = responseData.Runtime.Hardware.Current
+	// 	} else {
+	// 		hardware = "unknown"
+	// 	}
+
+	// 	// Check if Storage is defined and has a Current value
+	// 	if responseData.Runtime.Storage != nil && responseData.Runtime.Storage.Current != "" {
+	// 		storage = responseData.Runtime.Storage.Current
+	// 	} else {
+	// 		storage = "unknown"
+	// 	}
+	// } else {
+	// 	// Default values if Runtime is not defined
+	// 	hardware = "unknown"
+	// 	storage = "unknown"
+	// }
+
+	// data.Hardware = types.StringValue(hardware)
+	// data.Storage = types.StringValue(storage)
+
+	// if responseData.LastModified != nil {
+	// 	data.LastModified = types.StringValue(*responseData.LastModified)
+	// } else {
+	// 	data.LastModified = types.StringValue("")
+	// }
+
+	// data.Likes = types.Int64Value(int64(responseData.Likes))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
